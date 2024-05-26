@@ -58,34 +58,40 @@ class AOAI:
 
     def get_model_list(self):
         return self.model_list
-    
+
     def set_model_list(self, model_list):
         if model_list is not None and isinstance(model_list, list):
             self.logger.info(f"Setting model list to {model_list}.")
             self.model_list = model_list
         else:
-            self.logger.warning(f"Cannot set model list to {model_list}, which is not a list.")
-        
+            self.logger.warning(
+                f"Cannot set model list to {model_list}, which is not a list."
+            )
+
     def add_model(self, model):
         self.logger.info(f"Adding model {model} to the model list.")
         self.model_list.append(model)
-    
+
     def remove_model(self, model):
         if model in self.model_list:
             self.logger.info(f"Removing model {model} from the model list.")
             self.model_list.remove(model)
         else:
-            self.logger.info(f"Cannot remove model {model}, which is not in the model list.")
-    
+            self.logger.info(
+                f"Cannot remove model {model}, which is not in the model list."
+            )
+
     def get_default_model(self):
         return self.default_model
-    
+
     def set_default_model(self, model):
         if model in self.model_list:
             self.logger.info(f"Changing default model to {model}.")
             self.default_model = model
         else:
-            self.logger.info(f"Cannot set default model to {model}, which is not in the model list.")
+            self.logger.info(
+                f"Cannot set default model to {model}, which is not in the model list."
+            )
 
     def chat(
         self,
@@ -95,6 +101,7 @@ class AOAI:
         system_prompt="You're a helpful assistant",
         chat_history=[],
         stream=False,
+        # stream_options={},   # not supported as in API version 2024-05-01-preview. Github issue: https://github.com/Azure/azure-rest-api-specs/issues/29157
     ):
         # sanity check and fallback mechanism
         if not model:
@@ -113,7 +120,8 @@ class AOAI:
         messages.append(self._create_multimodal_prompt_object(query, image))
         # get chat response
         response = self.client.chat.completions.create(
-            model=model, messages=messages, stream=stream
+            model=model, messages=messages, stream=stream,
+            # stream_options=stream_options
         )
         return response
 
