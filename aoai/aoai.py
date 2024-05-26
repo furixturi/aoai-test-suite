@@ -26,6 +26,7 @@ class AOAI:
             "azure_endpoint": os.getenv("DEFAULT_AZURE_ENDPOINT"),
             "api_version": os.getenv("DEFAULT_API_VERSION"),
             "default_model": os.getenv("DEFAULT_MODEL"),
+            "model_list": os.getenv("MODEL_LIST", []),
         }
         self.configs = utilities.merge_configs(
             default_configs=default_configs,
@@ -33,6 +34,14 @@ class AOAI:
             configs=configs,
             required_keys=["api_key", "api_version", "azure_endpoint"],
         )
+
+        self.default_model = self.configs["default_model"]
+        self.model_list = (
+            self.configs.get("model_list")
+            if len(self.configs.get("model_list")) > 0
+            else [self.default_model]
+        )
+
         self.logger = utilities.setup_logger()
         self._createAOAIClients()
 
@@ -46,44 +55,54 @@ class AOAI:
         self.client_async = AsyncAzureOpenAI(
             api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
         )
-        self.default_model = self.configs["default_model"]
 
-    # default
-    ## chat
-    ### default model is set in the env DEFAULT_MODEL
+    def get_model_list(self):
+        return self.model_list
+    
+    def set_model_list(self, model_list):
+        if model_list is not None and isinstance(model_list, list):
+            self.logger.info(f"Setting model list to {model_list}.")
+            self.model_list = model_list
+        else:
+            self.logger.warning(f"Cannot set model list to {model_list}, which is not a list.")
+        
+    def add_model(self, model):
+        self.logger.info(f"Adding model {model} to the model list.")
+        self.model_list.append(model)
+    
+    def remove_model(self, model):
+        if model in self.model_list:
+            self.logger.info(f"Removing model {model} from the model list.")
+            self.model_list.remove(model)
+        else:
+            self.logger.info(f"Cannot remove model {model}, which is not in the model list.")
+    
+    def get_default_model(self):
+        return self.default_model
+    
+    def set_default_model(self, model):
+        if model in self.model_list:
+            self.logger.info(f"Changing default model to {model}.")
+            self.default_model = model
+        else:
+            self.logger.info(f"Cannot set default model to {model}, which is not in the model list.")
+
     def chat(
         self,
         query,
+        image=None,
         model=None,
         system_prompt="You're a helpful assistant",
         chat_history=[],
         stream=False,
     ):
+        # sanity check and fallback mechanism
         if not model:
             model = self.default_model
-        messages = []
-        # prepare system prompt
-        messages.append({"role": "system", "content": system_prompt})
-        # add history
-        messages.extend(chat_history)
-        # add user query
-        messages.append({"role": "user", "content": query})
-        # get chat response
-        response = self.client.chat.completions.create(
-            model=model, messages=messages, stream=stream
-        )
-        return response
-
-    def chat_image_input(
-        self,
-        query,
-        image,
-        model=None,
-        system_prompt="You're a helpful assistant",
-        chat_history=[],
-        stream=False,
-    ):
-        if not model:
+        elif model not in self.model_list:
+            self.logger.warning(
+                f"Model {model} is not in the model list. Using default model {self.default_model} instead."
+            )
             model = self.default_model
         messages = []
         # prepare system prompt
@@ -142,12 +161,12 @@ if __name__ == "__main__":
         query="Hello", system_prompt="You are a very funny and friendly assistant."
     )
     print(response.choices[0].message.content)
-    
+
     print("simple chat with image")
     response = aoai.chat_image_input(
         query="Hello, what does this picture say about bears?",
         image="./images/bear.jpg",
         system_prompt="You are a very funny and helpful assistant that can describe pictures.",
-        model="gpt-4o" # same azure endpoint with default model
+        model="gpt-4o",  # same azure endpoint with default model
     )
     print(response.choices[0].message.content)
