@@ -102,6 +102,7 @@ class AOAI:
         chat_history=[],
         stream=False,
         # stream_options={},   # not supported as in API version 2024-05-01-preview. Github issue: https://github.com/Azure/azure-rest-api-specs/issues/29157
+        response_format="text",
     ):
         # sanity check and fallback mechanism
         if not model:
@@ -120,7 +121,7 @@ class AOAI:
         messages.append(self._create_multimodal_prompt_object(query, image))
         # get chat response
         response = self.client.chat.completions.create(
-            model=model, messages=messages, stream=stream,
+            model=model, messages=messages, stream=stream, response_format={"type": response_format}
             # stream_options=stream_options
         )
         return response
