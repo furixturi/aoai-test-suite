@@ -112,6 +112,7 @@ class AOAI:
                 f"Model {model} is not in the model list. Using default model {self.default_model} instead."
             )
             model = self.default_model
+        # prepare messages
         messages = []
         # prepare system prompt
         messages.append({"role": "system", "content": system_prompt})
@@ -121,8 +122,42 @@ class AOAI:
         messages.append(self._create_multimodal_prompt_object(query, image))
         # get chat response
         response = self.client.chat.completions.create(
-            model=model, messages=messages, stream=stream, response_format={"type": response_format}
+            model=model,
+            messages=messages,
+            stream=stream,
+            response_format={"type": response_format},
             # stream_options=stream_options
+        )
+        return response
+
+    def chat_with_tools(
+        self,
+        query,
+        tools,
+        tool_choice="auto",
+        model=None,
+        system_prompt="You're a helpful assistant",
+        chat_history=[],
+    ):
+        # sanity check and fallback mechanism
+        if not model:
+            model = self.default_model
+        elif model not in self.model_list:
+            self.logger.warning(
+                f"Model {model} is not in the model list. Using default model {self.default_model} instead."
+            )
+            model = self.default_model
+        # prepare messages
+        messages = []
+        # prepare system prompt
+        messages.append({"role": "system", "content": system_prompt})
+        # add history
+        messages.extend(chat_history)
+        # add user query
+        messages.append(self._create_multimodal_prompt_object(query))
+        # get chat response
+        response = self.client.chat.completions.create(
+            model=model, messages=messages, tools=tools, tool_choice=tool_choice
         )
         return response
 
